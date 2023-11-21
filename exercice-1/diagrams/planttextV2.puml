@@ -1,15 +1,14 @@
 @startuml
 !pragma teoz true
-box "Bash process"
-participant bash
 
-box "Preambule process (child process)" #lightblue
+
+box "MultitaskingAccumulator" #lightblue
 participant "main" as main
 participant "thread_1:pthread_t" as thread1
 participant "mutex:pthread_mutex_t" as mutex
 participant "semaphore:sem_t" as semaphore
 end box
-end box
+
 
 activate bash
 bash -> main --++ : ./preambule
@@ -52,6 +51,5 @@ main -> semaphore :sem_destroy
 activate semaphore #gold
 return
 
-main --> bash --++:return ERROR_SUCCESS
 
 @enduml

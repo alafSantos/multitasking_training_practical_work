@@ -12,7 +12,7 @@ typedef struct MSG_BLOCK_TAG
 } MSG_BLOCK;
 
 /**
-* Displays the message content
+* Message verification
 * @param mBlock the message pointer
 * @return 1 if the checksum is ok, 0 otherwise
 */
