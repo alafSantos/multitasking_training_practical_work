@@ -1,0 +1,114 @@
+@startuml
+skinparam sequenceMessageAlign center
+!pragma teoz true
+
+
+box "MultitaskingAccumulator" #lightblue
+participant "main" as main
+participant "producer[0]: pthread_t" as thread1
+participant "producer[1]: pthread_t" as thread2
+participant "producer[2]: pthread_t" as thread3
+participant "producer[3]: pthread_t" as thread4
+participant "m1: pthread_mutex_t" as mutex
+participant "semaphore:sem_t" as semaphore
+participant "AcquisitionManager" as acq
+participant "consumer: pthread_t" as threadd
+participant "MessageAdder" as add
+participant "display: pthread_t" as thredisp
+participant "DisplayManager" as disp
+end box 
+
+
+activate main
+
+main -> acq:acquisitionManagerInit
+activate acq 
+
+acq -> thread1:pthread_create
+activate thread1 #FFBBBB
+thread1-->acq
+
+acq -> thread2:pthread_create
+activate thread2 #FFBBBB
+thread2-->acq
+
+acq -> thread3:pthread_create
+activate thread3 #FFBBBB
+thread3-->acq
+
+acq -> thread4:pthread_create
+activate thread4 #FFBBBB
+thread4-->acq
+
+acq --> main
+deactivate acq
+
+
+
+
+main -> add:messageAdderInit
+activate add 
+
+add -> threadd:pthread_create
+activate threadd #FFBBBB
+threadd-->add
+
+add --> main
+deactivate add
+
+
+
+
+main -> disp:displayManagerInit
+activate disp 
+
+disp -> thredisp:pthread_create
+activate thredisp #FFBBBB
+thredisp-->disp
+
+disp --> main
+deactivate disp
+
+
+
+
+main -> semaphore:sem_unlink
+activate semaphore #gold
+return
+main -> semaphore:sem_open
+activate semaphore #gold
+return
+
+main -> thread1:pthread_create
+activate thread1 
+thread1 --> main
+
+main -> thread1:pthread_join
+deactivate main
+
+thread1 -> mutex:pthread_mutex_lock
+activate mutex #plum
+return
+
+thread1 -> mutex:pthread_mutex_unlock
+activate mutex #plum
+return
+
+thread1 -> semaphore:sem_post
+activate semaphore #gold
+return
+
+thread1 -> semaphore:sem_wait
+activate semaphore #gold
+return 
+
+thread1 -> thread1 :pthread_exit
+thread1 --> main --++
+
+main -> semaphore :sem_destroy
+activate semaphore #gold
+return
+
+
+
+@enduml
