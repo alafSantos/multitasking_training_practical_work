@@ -51,7 +51,10 @@ static void *display(void *parameters)
 		{
 			messageDisplay(&tmp);
 		}
-		diffCount = getProducedCount() - getConsumedCount();
+
+		__uint8_t msgLeft = getProducedCount() - getConsumedCount();
+		if (msgLeft == 0)
+			diffCount = DISPLAY_LOOP_LIMIT; // il va mieux de verifier ça
 		print(getProducedCount(), getConsumedCount());
 		//  #####################################################################
 	}

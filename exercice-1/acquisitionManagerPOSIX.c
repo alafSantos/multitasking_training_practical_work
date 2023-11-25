@@ -46,7 +46,7 @@ static unsigned int createSynchronizationObjects(void)
 	// TODO
 	//  #####################################################################
 	Socc = sem_open("Socc", O_CREAT, 0644, 0);
-	Slib = sem_open("Socc", O_CREAT, 0644, N);
+	Slib = sem_open("Slib", O_CREAT, 0644, N);
 	// #####################################################################
 
 	printf("[acquisitionManager]Semaphore created\n");
