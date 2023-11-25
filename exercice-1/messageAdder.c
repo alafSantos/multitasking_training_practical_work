@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <semaphore.h> 
+#include <semaphore.h>
 #include <unistd.h>
 #include <pthread.h>
 #include "messageAdder.h"
@@ -10,11 +10,11 @@
 #include "iAcquisitionManager.h"
 #include "debug.h"
 
-//consumer thread
+// consumer thread
 pthread_t consumer;
-//Message computed
+// Message computed
 volatile MSG_BLOCK out;
-//Consumer count storage
+// Consumer count storage
 volatile unsigned int consumeCount = 0;
 
 /**
@@ -25,42 +25,63 @@ static void incrementConsumeCount(void);
 /**
  * Consumer entry point.
  */
-static void *sum( void *parameters );
+static void *sum(void *parameters);
 
-
-MSG_BLOCK getCurrentSum(){
-	//TODO
+MSG_BLOCK getCurrentSum()
+{
+	// TODO
+	//  #####################################################################
+	return out;
+	// #####################################################################
 }
 
-unsigned int getConsumedCount(){
-	//TODO
+unsigned int getConsumedCount()
+{
+	// TODO
+	//  #####################################################################
+	return consumeCount;
+	// #####################################################################
 }
 
-
-void messageAdderInit(void){
+void messageAdderInit(void)
+{
 	out.checksum = 0;
 	for (size_t i = 0; i < DATA_SIZE; i++)
 	{
 		out.mData[i] = 0;
 	}
-	//TODO
+	// TODO
+	//  #####################################################################
+	pthread_create(&consumer, NULL, sum, NULL);
+	// #####################################################################
 }
 
-void messageAdderJoin(void){
-	//TODO
+void messageAdderJoin(void)
+{
+	// TODO
+	//  #####################################################################
+	pthread_join(consumer, NULL);
+	// #####################################################################
 }
 
-static void *sum( void *parameters )
+static void *sum(void *parameters)
 {
 	D(printf("[messageAdder]Thread created for sum with id %d\n", gettid()));
 	unsigned int i = 0;
-	while(i<ADDER_LOOP_LIMIT){
+	while (i < ADDER_LOOP_LIMIT)
+	{
 		i++;
 		sleep(ADDER_SLEEP_TIME);
-		//TODO
+		// TODO
+		// #####################################################################
+		MSG_BLOCK tmp = getMessage();
+		messageAdd(&out, &tmp);
+		consumeCount++;
+		// #####################################################################
 	}
 	printf("[messageAdder] %d termination\n", gettid());
-	//TODO
+	// TODO
+	//  #####################################################################
+	pthread_exit(NULL);
+	// #####################################################################
 }
-
-
