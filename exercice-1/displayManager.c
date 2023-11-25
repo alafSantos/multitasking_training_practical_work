@@ -9,31 +9,55 @@
 #include "multitaskingAccumulator.h"
 #include "debug.h"
 
+//  #####################################################################
+extern pid_t gettid(void); // just to remove one warning
+//  #####################################################################
+
 // DisplayManager thread.
 pthread_t displayThread;
 
 /**
  * Display manager entry point.
  * */
-static void *display( void *parameters );
+static void *display(void *parameters);
 
-
-void displayManagerInit(void){
-	//TODO
+void displayManagerInit(void)
+{
+	// TODO
+	//  #####################################################################
+	pthread_create(&displayThread, NULL, display, NULL);
+	// #####################################################################
 }
 
-void displayManagerJoin(void){
-	//TODO	
-} 
+void displayManagerJoin(void)
+{
+	// TODO
+	//  #####################################################################
+	pthread_join(displayThread, NULL);
+	// #####################################################################
+}
 
-static void *display( void *parameters )
+static void *display(void *parameters)
 {
 	D(printf("[displayManager]Thread created for display with id %d\n", gettid()));
 	unsigned int diffCount = 0;
-	while(diffCount < DISPLAY_LOOP_LIMIT){
+	while (diffCount < DISPLAY_LOOP_LIMIT)
+	{
 		sleep(DISPLAY_SLEEP_TIME);
-		//TODO
+		// TODO
+		//  #####################################################################
+		MSG_BLOCK tmp = getCurrentSum();
+		if (messageCheck(&tmp))
+		{
+			messageDisplay(&tmp);
+		}
+		diffCount = getProducedCount() - getConsumedCount();
+		print(getProducedCount(), getConsumedCount());
+		//  #####################################################################
 	}
 	printf("[displayManager] %d termination\n", gettid());
-   //TODO
+	// TODO
+	//  #####################################################################
+	pthread_exit(NULL);
+	// #####################################################################
 }

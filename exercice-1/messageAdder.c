@@ -10,6 +10,10 @@
 #include "iAcquisitionManager.h"
 #include "debug.h"
 
+//  #####################################################################
+extern pid_t gettid(void); // just to remove one warning
+//  #####################################################################
+
 // consumer thread
 pthread_t consumer;
 // Message computed
@@ -21,6 +25,14 @@ volatile unsigned int consumeCount = 0;
  * Increments the consume count.
  */
 static void incrementConsumeCount(void);
+
+//  #####################################################################
+static void incrementConsumeCount(void)
+{
+
+	consumeCount++;
+}
+//  #####################################################################
 
 /**
  * Consumer entry point.
@@ -76,7 +88,7 @@ static void *sum(void *parameters)
 		// #####################################################################
 		MSG_BLOCK tmp = getMessage();
 		messageAdd(&out, &tmp);
-		consumeCount++;
+		incrementConsumeCount();
 		// #####################################################################
 	}
 	printf("[messageAdder] %d termination\n", gettid());
