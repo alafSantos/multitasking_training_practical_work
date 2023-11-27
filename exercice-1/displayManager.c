@@ -52,16 +52,9 @@ static void *display(void *parameters)
 		// TODO
 		//  #####################################################################
 		tmp = getCurrentSum();
-		// Exigence 3 : On fait le test en amont, dans l'acquisition manager
-		// if (messageCheck(&tmp))
-		//{
 		messageDisplay(&tmp);
-		//}
-
-		__uint8_t msgLeft = getProducedCount() - getConsumedCount();
-		if (msgLeft == 0)
-			diffCount = DISPLAY_LOOP_LIMIT; // il va mieux de verifier ça
 		print(getProducedCount(), getConsumedCount());
+		diffCount++;
 		//  #####################################################################
 	}
 	printf("[displayManager] %d termination\n", gettid());

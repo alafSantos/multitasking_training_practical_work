@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include "messageAdder.h"
 #include "msg.h"
@@ -23,7 +24,11 @@ volatile unsigned int consumeCount = 0;
 
 // Mutex protégeant produceCount
 pthread_mutex_t mconscount = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t msum = PTHREAD_MUTEX_INITIALIZER;
+
+//  #####################################################################
+static sem_t *Socc;
+static sem_t *Slib;
+//  #####################################################################
 
 /**
  * Increments the consume count.
@@ -40,9 +45,9 @@ MSG_BLOCK getCurrentSum()
 	// TODO
 	//  #####################################################################
 	MSG_BLOCK p;
-	pthread_mutex_lock(&msum);
+	sem_wait(Socc);
 	p = out;
-	pthread_mutex_unlock(&msum);
+	sem_post(Slib);
 	return p;
 	// #####################################################################
 }
@@ -68,6 +73,20 @@ void messageAdderInit(void)
 	}
 	// TODO
 	//  #####################################################################
+
+	// On supprime les sémaphores si ceux-ci existent
+	sem_unlink("SoccMA");
+	sem_unlink("SlibMA");
+	// On créent les sémaphores qu'on désire
+	Socc = sem_open("SoccMA", O_CREAT, 0644, 0);
+	Slib = sem_open("SlibMA", O_CREAT, 0644, 1);
+	// On vérifie si ils sont ouverts
+	if ((Socc == SEM_FAILED) || (Slib == SEM_FAILED))
+	{
+		perror("[sem_open]");
+		return;
+	}
+
 	pthread_create(&consumer, NULL, sum, NULL);
 	// #####################################################################
 }
@@ -93,21 +112,30 @@ static void *sum(void *parameters)
 {
 	// #####################################################################
 	// Init hors de la boucle pour éviter d'avoir à recréer
-	MSG_BLOCK tmp;
+	MSG_BLOCK tmp1, tmp2;
 	// #####################################################################
 	D(printf("[messageAdder]Thread created for sum with id %d\n", gettid()));
 	unsigned int i = 0;
 	while (i < ADDER_LOOP_LIMIT)
 	{
-		i++;
-		sleep(ADDER_SLEEP_TIME);
+
 		// TODO
 		// #####################################################################
-		tmp = getMessage();
-		pthread_mutex_lock(&msum);
-		messageAdd(&out, &tmp);
-		pthread_mutex_unlock(&msum);
+		tmp1 = getMessage();
 		incrementConsumeCount();
+		i++;
+		for (int k = 0; k < 3; k++)
+		{
+			sleep(ADDER_SLEEP_TIME);
+			tmp2 = getMessage();
+			messageAdd(&tmp1, &tmp2);
+			incrementConsumeCount();
+			i++;
+		}
+
+		sem_wait(Slib);
+		out = tmp1;
+		sem_post(Socc);
 		// #####################################################################
 	}
 	printf("[messageAdder] %d termination\n", gettid());
