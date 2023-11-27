@@ -10,7 +10,7 @@
 #include "debug.h"
 
 //  #####################################################################
-extern pid_t gettid(void); // just to remove one warning
+//  extern pid_t gettid(void); // just to remove one warning
 //  #####################################################################
 
 // DisplayManager thread.
@@ -39,6 +39,12 @@ void displayManagerJoin(void)
 
 static void *display(void *parameters)
 {
+	//  #####################################################################
+	//Hors de la boucle pour éviter de le recréer à chaque iteration
+	MSG_BLOCK tmp;
+	//  #####################################################################
+
+	
 	D(printf("[displayManager]Thread created for display with id %d\n", gettid()));
 	unsigned int diffCount = 0;
 	while (diffCount < DISPLAY_LOOP_LIMIT)
@@ -46,11 +52,12 @@ static void *display(void *parameters)
 		sleep(DISPLAY_SLEEP_TIME);
 		// TODO
 		//  #####################################################################
-		MSG_BLOCK tmp = getCurrentSum();
-		if (messageCheck(&tmp))
-		{
+		tmp = getCurrentSum();
+		//Exigence 3 : On fait le test en amont, dans l'acquisition manager
+		//if (messageCheck(&tmp))
+		//{
 			messageDisplay(&tmp);
-		}
+		//}
 
 		__uint8_t msgLeft = getProducedCount() - getConsumedCount();
 		if (msgLeft == 0)

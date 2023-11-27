@@ -21,4 +21,9 @@
 //The number adder iterations
 #define ADDER_LOOP_LIMIT    PRODUCER_LOOP_LIMIT * PRODUCER_COUNT * PRODUCER_SLEEP_TIME
 
+//############
+//Règle la taille du buffer
+#define SIZE_BUFFER 8
+//############
+
 #endif

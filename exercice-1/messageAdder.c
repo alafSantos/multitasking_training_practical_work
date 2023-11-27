@@ -11,7 +11,7 @@
 #include "debug.h"
 
 //  #####################################################################
-extern pid_t gettid(void); // just to remove one warning
+//  extern pid_t gettid(void); // just to remove one warning
 //  #####################################################################
 
 // consumer thread
@@ -21,29 +21,31 @@ volatile MSG_BLOCK out;
 // Consumer count storage
 volatile unsigned int consumeCount = 0;
 
+//Mutex protégeant produceCount
+pthread_mutex_t mconscount = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t msum = PTHREAD_MUTEX_INITIALIZER;
+
 /**
  * Increments the consume count.
  */
 static void incrementConsumeCount(void);
-
-//  #####################################################################
-static void incrementConsumeCount(void)
-{
-
-	consumeCount++;
-}
-//  #####################################################################
 
 /**
  * Consumer entry point.
  */
 static void *sum(void *parameters);
 
+
+
 MSG_BLOCK getCurrentSum()
 {
 	// TODO
 	//  #####################################################################
-	return out;
+	MSG_BLOCK p;
+	pthread_mutex_lock(&msum);
+	p = out;
+	pthread_mutex_unlock(&msum);
+	return p;
 	// #####################################################################
 }
 
@@ -51,7 +53,11 @@ unsigned int getConsumedCount()
 {
 	// TODO
 	//  #####################################################################
-	return consumeCount;
+	unsigned int p;
+	pthread_mutex_lock(&mconscount);
+	p = consumeCount;
+	pthread_mutex_unlock(&mconscount);
+	return p;
 	// #####################################################################
 }
 
@@ -76,8 +82,22 @@ void messageAdderJoin(void)
 	// #####################################################################
 }
 
+
+//  #####################################################################
+static void incrementConsumeCount(void)
+{
+	pthread_mutex_lock(&mconscount);
+	consumeCount++;	
+	pthread_mutex_unlock(&mconscount);
+}
+//  #####################################################################
+
 static void *sum(void *parameters)
 {
+	// #####################################################################
+	//Init hors de la boucle pour éviter d'avoir à recréer
+	MSG_BLOCK tmp;
+	// #####################################################################
 	D(printf("[messageAdder]Thread created for sum with id %d\n", gettid()));
 	unsigned int i = 0;
 	while (i < ADDER_LOOP_LIMIT)
@@ -86,8 +106,10 @@ static void *sum(void *parameters)
 		sleep(ADDER_SLEEP_TIME);
 		// TODO
 		// #####################################################################
-		MSG_BLOCK tmp = getMessage();
+		tmp = getMessage();
+		pthread_mutex_lock(&msum);
 		messageAdd(&out, &tmp);
+		pthread_mutex_unlock(&msum);
 		incrementConsumeCount();
 		// #####################################################################
 	}
