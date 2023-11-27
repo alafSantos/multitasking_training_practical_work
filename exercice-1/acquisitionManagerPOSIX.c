@@ -11,15 +11,12 @@
 #include "iAcquisitionManager.h"
 #include "debug.h"
 
-
-
 // producer count storage
 volatile unsigned int produceCount = 0;
 
 pthread_t producers[4];
 
 static void *produce(void *params);
-
 
 /**
  * Semaphores and Mutex
@@ -33,21 +30,21 @@ static void *produce(void *params);
 
 static MSG_BLOCK Buffer[SIZE_BUFFER];
 
-//Initialise les tableaux et leurs indices pour le Multi-Write Mono-Read
+// Initialise les tableaux et leurs indices pour le Multi-Write Mono-Read
 int TabOcc[SIZE_BUFFER];
 int TabLib[SIZE_BUFFER];
 
-//Pointeurs pour les tableaux TabOcc et TabLib pour le Multi-Write
-//Il faudra les protéger et rendre leur actualisation atomique 
-u_int8_t iocc=0; ilib=0;
+// Pointeurs pour les tableaux TabOcc et TabLib pour le Multi-Write
+// Il faudra les protéger et rendre leur actualisation atomique
+u_int8_t iocc = 0;
+u_int8_t ilib = 0;
 
-
-//Mutex protégeant le multi-Write
+// Mutex protégeant le multi-Write
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER, mutex2 = PTHREAD_MUTEX_INITIALIZER;
-//Mutex protégeant produceCount
+// Mutex protégeant produceCount
 pthread_mutex_t mprodcount = PTHREAD_MUTEX_INITIALIZER;
 
-//Semaphores liés au remplissage du tableau
+// Semaphores liés au remplissage du tableau
 sem_t *Socc;
 sem_t *Slib;
 // #####################################################################
@@ -68,24 +65,24 @@ static unsigned int createSynchronizationObjects(void)
 
 	// TODO
 	//  #####################################################################
-	//On supprime les sémaphores si ceux-ci existent
+	// On supprime les sémaphores si ceux-ci existent
 	sem_unlink(SEM_OCC_NAME);
 	sem_unlink(SEM_LIB_NAME);
-	//On créent les sémaphores qu'on désire
+	// On créent les sémaphores qu'on désire
 	Socc = sem_open(SEM_OCC_NAME, O_CREAT, 0644, SEM_OCC_INITIAL_VALUE);
 	Slib = sem_open(SEM_LIB_NAME, O_CREAT, 0644, SEM_LIB_INITIAL_VALUE);
-	//On vérifie si ils sont ouverts	
-	if ((Socc == SEM_FAILED)||(Slib == SEM_FAILED))
+	// On vérifie si ils sont ouverts
+	if ((Socc == SEM_FAILED) || (Slib == SEM_FAILED))
 	{
-        perror("[sem_open]");
-    	return ERROR_INIT;
-    }
-	//On initialise les tableaux pour le Multi-Write Mono-Read
-	for(int i=0; i<SIZE_BUFFER; i++)
-    {
-    	TabOcc[i]=i;
-    	TabLib[i]=i;
-    }
+		perror("[sem_open]");
+		return ERROR_INIT;
+	}
+	// On initialise les tableaux pour le Multi-Write Mono-Read
+	for (int i = 0; i < SIZE_BUFFER; i++)
+	{
+		TabOcc[i] = i;
+		TabLib[i] = i;
+	}
 
 	// #####################################################################
 
@@ -123,19 +120,19 @@ MSG_BLOCK getMessage(void)
 
 	MSG_BLOCK msg;
 	int tmp;
-	
-	//Pas de dupplication de i et de protection en + des sem car Mono-read
-	static u_int8_t iread=0;
+
+	// Pas de dupplication de i et de protection en + des sem car Mono-read
+	static u_int8_t iread = 0;
 
 	sem_wait(Socc);
 
-	//Recupération de l'adresse
-	tmp=TabOcc[iread];
-	//Récupération de la donnée
+	// Recupération de l'adresse
+	tmp = TabOcc[iread];
+	// Récupération de la donnée
 	msg = Buffer[tmp];
-	//Actualisation du tableau libre
-	TabLib[iread]=tmp;
-	//Maj de l'indice
+	// Actualisation du tableau libre
+	TabLib[iread] = tmp;
+	// Maj de l'indice
 	iread = (iread + 1) % SIZE_BUFFER;
 
 	sem_post(Slib);
@@ -195,10 +192,9 @@ void *produce(void *params)
 	D(printf("[acquisitionManager]Producer created with id %d\n", gettid()));
 	unsigned int i = 0;
 
-	//Création des tampons
+	// Création des tampons
 	MSG_BLOCK msg;
 	int ind;
-
 
 	while (i < PRODUCER_LOOP_LIMIT)
 	{
@@ -207,31 +203,30 @@ void *produce(void *params)
 
 		// TODO
 		//  #####################################################################
-		//Load the input from the entry 
-		getInput(i,&msg);
+		// Load the input from the entry
+		getInput(i, &msg);
 
-		//On fait le checksum avant la transmission
-		if(messageCheck(&msg)==ERROR_SUCCESS)
+		// On fait le checksum avant la transmission
+		if (messageCheck(&msg)) // messageCheck returns 1 in case of checksum validated
 		{
-			// Début du Multi-write 
+			// Début du Multi-write
 			sem_wait(Slib);
 
 			pthread_mutex_lock(&mutex1);
 			ind = TabLib[ilib];
-			ilib = ((ilib + 1)%SIZE_BUFFER);
+			ilib = ((ilib + 1) % SIZE_BUFFER);
 			pthread_mutex_unlock(&mutex1);
 
-		
 			Buffer[ind] = msg;
-			incrementProducedCount(); 
-			
+			incrementProducedCount();
+
 			pthread_mutex_lock(&mutex2);
-			TabOcc[iocc]=ind;
-			iocc = ((iocc + 1)%SIZE_BUFFER);
+			TabOcc[iocc] = ind;
+			iocc = ((iocc + 1) % SIZE_BUFFER);
 			pthread_mutex_unlock(&mutex2);
-		
+
 			sem_post(Socc);
-			//Fin du Multi-Write
+			// Fin du Multi-Write
 		}
 		//  #####################################################################
 	}

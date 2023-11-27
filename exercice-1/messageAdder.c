@@ -21,7 +21,7 @@ volatile MSG_BLOCK out;
 // Consumer count storage
 volatile unsigned int consumeCount = 0;
 
-//Mutex protégeant produceCount
+// Mutex protégeant produceCount
 pthread_mutex_t mconscount = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t msum = PTHREAD_MUTEX_INITIALIZER;
 
@@ -34,8 +34,6 @@ static void incrementConsumeCount(void);
  * Consumer entry point.
  */
 static void *sum(void *parameters);
-
-
 
 MSG_BLOCK getCurrentSum()
 {
@@ -82,12 +80,11 @@ void messageAdderJoin(void)
 	// #####################################################################
 }
 
-
 //  #####################################################################
 static void incrementConsumeCount(void)
 {
 	pthread_mutex_lock(&mconscount);
-	consumeCount++;	
+	consumeCount++;
 	pthread_mutex_unlock(&mconscount);
 }
 //  #####################################################################
@@ -95,7 +92,7 @@ static void incrementConsumeCount(void)
 static void *sum(void *parameters)
 {
 	// #####################################################################
-	//Init hors de la boucle pour éviter d'avoir à recréer
+	// Init hors de la boucle pour éviter d'avoir à recréer
 	MSG_BLOCK tmp;
 	// #####################################################################
 	D(printf("[messageAdder]Thread created for sum with id %d\n", gettid()));

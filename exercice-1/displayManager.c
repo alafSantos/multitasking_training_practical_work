@@ -40,11 +40,10 @@ void displayManagerJoin(void)
 static void *display(void *parameters)
 {
 	//  #####################################################################
-	//Hors de la boucle pour éviter de le recréer à chaque iteration
+	// Hors de la boucle pour éviter de le recréer à chaque iteration
 	MSG_BLOCK tmp;
 	//  #####################################################################
 
-	
 	D(printf("[displayManager]Thread created for display with id %d\n", gettid()));
 	unsigned int diffCount = 0;
 	while (diffCount < DISPLAY_LOOP_LIMIT)
@@ -53,10 +52,10 @@ static void *display(void *parameters)
 		// TODO
 		//  #####################################################################
 		tmp = getCurrentSum();
-		//Exigence 3 : On fait le test en amont, dans l'acquisition manager
-		//if (messageCheck(&tmp))
+		// Exigence 3 : On fait le test en amont, dans l'acquisition manager
+		// if (messageCheck(&tmp))
 		//{
-			messageDisplay(&tmp);
+		messageDisplay(&tmp);
 		//}
 
 		__uint8_t msgLeft = getProducedCount() - getConsumedCount();
