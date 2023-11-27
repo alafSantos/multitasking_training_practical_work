@@ -31,22 +31,28 @@ static void *produce(void *params);
 static MSG_BLOCK Buffer[SIZE_BUFFER];
 
 // Initialise les tableaux et leurs indices pour le Multi-Write Mono-Read
-int TabOcc[SIZE_BUFFER];
-int TabLib[SIZE_BUFFER];
+static int TabOcc[SIZE_BUFFER];
+static int TabLib[SIZE_BUFFER];
 
 // Pointeurs pour les tableaux TabOcc et TabLib pour le Multi-Write
 // Il faudra les protéger et rendre leur actualisation atomique
-u_int8_t iocc = 0;
-u_int8_t ilib = 0;
+static u_int8_t iocc = 0;
+static u_int8_t ilib = 0;
+//Pour le multi-read
+static u_int8_t jocc = 0;
+static u_int8_t jlib = 0;
+
 
 // Mutex protégeant le multi-Write
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER, mutex2 = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER, mutex2 = PTHREAD_MUTEX_INITIALIZER;
+// Mutex protégeant le multi-Read
+static pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER, mutex4 = PTHREAD_MUTEX_INITIALIZER;
 // Mutex protégeant produceCount
-pthread_mutex_t mprodcount = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mprodcount = PTHREAD_MUTEX_INITIALIZER;
 
 // Semaphores liés au remplissage du tableau
-sem_t *Socc;
-sem_t *Slib;
+static sem_t *Socc;
+static sem_t *Slib;
 // #####################################################################
 
 /*
@@ -116,24 +122,29 @@ MSG_BLOCK getMessage(void)
 {
 	// TODO
 	//  #####################################################################
-	// Mono-read
+	// Multi-read
 
 	MSG_BLOCK msg;
 	int tmp;
 
-	// Pas de dupplication de i et de protection en + des sem car Mono-read
-	static u_int8_t iread = 0;
-
 	sem_wait(Socc);
 
 	// Recupération de l'adresse
-	tmp = TabOcc[iread];
+	pthread_mutex_lock(&mutex3);
+	tmp=TabOcc[jocc];
+	jocc = ((jocc + 1)%SIZE_BUFFER); 
+	pthread_mutex_unlock(&mutex3);
+
+
 	// Récupération de la donnée
 	msg = Buffer[tmp];
+
+	
 	// Actualisation du tableau libre
-	TabLib[iread] = tmp;
-	// Maj de l'indice
-	iread = (iread + 1) % SIZE_BUFFER;
+	pthread_mutex_lock(&mutex4);
+	TabOcc[jlib] = tmp;
+	jlib = ((jlib + 1) % SIZE_BUFFER);
+	pthread_mutex_unlock(&mutex4);
 
 	sem_post(Slib);
 
@@ -207,7 +218,7 @@ void *produce(void *params)
 		getInput(i, &msg);
 
 		// On fait le checksum avant la transmission
-		if (messageCheck(&msg)) // messageCheck returns 1 in case of checksum validated
+		if (messageCheck(&msg)) 
 		{
 			// Début du Multi-write
 			sem_wait(Slib);
