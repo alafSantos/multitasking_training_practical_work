@@ -1,0 +1,350 @@
+
+
+@startuml
+skinparam sequenceMessageAlign center
+!pragma teoz true
+
+
+box "MultitaskingAccumulator" #lightblue
+participant "main" as main
+participant "producer[i]: pthread_t" as thread1
+participant "producer[j]: pthread_t" as thread2
+participant "Slib_acq:sem_t" as slib_acq
+participant "Socc_acq:sem_t" as socc_acq
+participant "m1: pthread_mutex_t" as mutex1
+participant "m2: pthread_mutex_t" as mutex2
+participant "mprod: pthread_mutex_t" as mutexprod
+participant "AcquisitionManager" as acq
+participant "consumer: pthread_t" as threadd
+participant "Socc_add:sem_t" as socc_add
+participant "Slib_add:sem_t" as slib_add
+participant "mcons: pthread_mutex_t" as mutexcons
+participant "MessageAdder" as add
+participant "display: pthread_t" as thredisp
+participant "DisplayManager" as disp
+end box 
+
+
+activate main
+
+
+== Début de l'intitialisation ==
+
+
+
+main -> acq:acquisitionManagerInit
+deactivate main
+activate acq 
+
+acq -> slib_acq:sem_unlink
+activate slib_acq #gold
+return
+acq -> slib_acq:sem_open
+activate slib_acq #gold
+return
+
+
+acq -> socc_acq:sem_unlink
+activate socc_acq #gold
+return
+acq -> socc_acq:sem_open
+activate socc_acq #gold
+return
+
+
+acq -> thread1:pthread_create
+deactivate acq
+
+activate thread1 #FFBBBB
+thread1-->acq
+activate acq 
+
+
+
+acq -> thread2:pthread_create
+deactivate acq 
+activate thread2 #FFBBBB
+thread2-->acq
+activate acq 
+
+note over thread1, thread2
+Intitialisation des deux autres producers
+end note
+
+acq --> main
+deactivate acq
+activate main
+
+
+
+
+main -> add:messageAdderInit
+deactivate main
+activate add 
+
+add -> threadd:pthread_create
+activate threadd #FFBBBB
+threadd-->add
+
+add --> main
+deactivate add
+activate main
+
+
+
+main -> disp:displayManagerInit
+deactivate main
+activate disp 
+
+disp -> thredisp:pthread_create
+activate thredisp #FFBBBB
+thredisp-->disp
+
+disp --> main
+deactivate disp
+activate main
+
+
+
+
+
+
+== Début du traitement des données ==
+
+threadd->acq:getMessage
+deactivate threadd
+activate acq
+acq -> socc_acq:sem_wait
+deactivate acq
+activate socc_acq #gold
+deactivate socc_acq
+
+
+thread1 -> slib_acq:sem_wait
+activate slib_acq #gold
+return
+
+
+
+thread2 -> slib_acq:sem_wait
+activate slib_acq #gold
+return
+
+thread1 -> mutex1:pthread_mutex_lock
+activate mutex1 #plum
+return
+
+thread2 -> mutex1:pthread_mutex_lock
+activate mutex1 #plum
+return
+deactivate thread2
+
+thread1 -> mutex1:pthread_mutex_unlock
+activate mutex1 #plum
+return
+activate thread2 #FFBBBB
+
+thread2 -> mutex1:pthread_mutex_unlock
+activate mutex1 #plum
+return
+
+thread1 -> mutex2:pthread_mutex_lock
+activate mutex2 #plum
+return
+
+thread2 -> mutex2:pthread_mutex_lock
+activate mutex2 #plum
+return
+deactivate thread2
+
+
+thread1 -> mutex2:pthread_mutex_unlock
+activate mutex2 #plum
+return
+activate thread2 #FFBBBB
+
+thread2 -> mutex2:pthread_mutex_unlock
+activate mutex2 #plum
+return
+
+
+thread1 -> socc_acq:sem_post
+activate socc_acq #gold
+return 
+
+
+socc_acq-->acq
+activate acq
+
+acq -> slib_acq:sem_post
+deactivate acq
+activate slib_acq #gold
+return
+activate acq
+
+acq-->threadd
+deactivate acq
+activate threadd #FFBBBB
+
+
+thread2 -> socc_acq:sem_post
+activate socc_acq #gold
+return 
+
+note over threadd
+On répète jusqu'à avoir consommé quatres données
+end note
+
+
+
+
+
+thredisp->add:getSum
+deactivate thredisp
+activate add
+add -> socc_add:sem_wait
+deactivate add
+activate slib_add #gold
+deactivate slib_add
+
+
+threadd -> slib_add:sem_wait
+activate slib_add#gold
+return
+
+threadd -> socc_add:sem_pose
+activate socc_add #gold
+return
+
+
+socc_add-->add
+activate add
+
+add -> slib_add:sem_pose
+deactivate add
+activate slib_add#gold
+return
+activate add
+
+add-->thredisp
+deactivate add
+activate thredisp #FFBBBB
+
+
+
+
+== Appel des compteurs ==
+
+thread1 -> mutexprod:pthread_mutex_lock
+activate mutexprod #plum
+return
+
+thredisp -> acq:getProducedCount
+activate acq
+deactivate thredisp
+
+
+acq -> mutexprod:pthread_mutex_lock
+activate mutexprod #plum
+return
+deactivate acq
+
+thread1 -> mutexprod:pthread_mutex_unlock
+activate mutexprod #plum
+return
+activate acq
+
+acq -> mutexprod:pthread_mutex_unlock
+activate mutexprod #plum
+return
+acq->thredisp
+deactivate acq
+activate thredisp #FFBBBB
+
+
+
+
+threadd -> mutexcons:pthread_mutex_lock
+activate mutexcons #plum
+return
+
+thredisp -> add:getConsumedCount
+activate add
+deactivate thredisp
+
+add -> mutexcons:pthread_mutex_lock
+activate mutexcons #plum
+return
+deactivate add
+
+threadd -> mutexcons:pthread_mutex_unlock
+activate mutexcons #plum
+return
+activate add
+
+add -> mutexcons:pthread_mutex_unlock
+activate mutexcons #plum
+return
+add->thredisp
+deactivate add
+activate thredisp #FFBBBB
+
+
+
+
+== Début des joins ==
+
+main -> disp:displayManagerJoin
+activate disp 
+deactivate main
+disp->thredisp:pthread_join
+deactivate disp
+thredisp -> thredisp :pthread_exit
+thredisp --> disp
+deactivate thredisp
+activate disp
+disp --> main
+deactivate disp
+activate main
+
+
+main ->add:messageAdderJoin
+activate add 
+deactivate main
+add->threadd:pthread_join
+deactivate add
+threadd -> threadd :pthread_exit
+threadd --> add
+deactivate threadd
+activate add
+add --> main
+deactivate add
+activate main
+
+
+main ->acq:acquisitionManagerJoin
+activate acq 
+deactivate main
+
+acq->thread1:pthread_join
+deactivate acq
+thread1 -> thread1 :pthread_exit
+thread1 --> acq
+activate acq 
+deactivate thread1
+
+acq->thread2:pthread_join
+deactivate acq 
+deactivate acq
+thread2 -> thread2 :pthread_exit
+thread2 --> acq
+deactivate thread2
+
+activate acq
+acq --> main
+deactivate acq
+activate main
+
+
+
+@enduml
